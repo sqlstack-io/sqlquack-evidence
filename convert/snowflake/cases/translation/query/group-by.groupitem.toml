@@ -1,0 +1,83 @@
+category = "translation"
+construct = "sf.query.group-by.groupitem"
+session_profile = "utc-v1"
+
+[[case]]
+id = "t001_column"
+description = "COUNT and SUM by g: a, b and the NULL group. Catches: the NULL keys split into separate groups, or dropped"
+columns = [{ name = "g", type = "VARCHAR" }, { name = "x", type = "NUMBER(38,0)" }]
+rows = [
+  ["'a'", "1"],
+  ["'a'", "2"],
+  ["'a'", "2"],
+  ["'b'", "3"],
+  ["'b'", "NULL"],
+  ["NULL", "4"],
+  ["NULL", "NULL"],
+]
+query = "SELECT g, COUNT(*) AS n, SUM(x) AS s FROM input GROUP BY g ORDER BY g NULLS LAST"
+order = "ordered"
+tags = ["type-combination"]
+
+[[case]]
+id = "t002_position_expression"
+description = "GROUP BY 1 on an expression, x modulo 2. Catches: the position read as a constant"
+columns = [{ name = "g", type = "VARCHAR" }, { name = "x", type = "NUMBER(38,0)" }]
+rows = [
+  ["'a'", "1"],
+  ["'a'", "2"],
+  ["'a'", "2"],
+  ["'b'", "3"],
+  ["'b'", "NULL"],
+  ["NULL", "4"],
+  ["NULL", "NULL"],
+]
+query = "SELECT MOD(x, 2) AS m, COUNT(*) AS n FROM input GROUP BY 1 ORDER BY m NULLS LAST"
+order = "ordered"
+tags = ["type-combination"]
+
+[[case]]
+id = "t003_null_key"
+description = "Grouping by x, which holds two NULLs: one NULL group of 2. Catches: two NULL groups"
+columns = [{ name = "g", type = "VARCHAR" }, { name = "x", type = "NUMBER(38,0)" }]
+rows = [
+  ["'a'", "1"],
+  ["'a'", "2"],
+  ["'a'", "2"],
+  ["'b'", "3"],
+  ["'b'", "NULL"],
+  ["NULL", "4"],
+  ["NULL", "NULL"],
+]
+query = "SELECT x, COUNT(*) AS n FROM input GROUP BY x ORDER BY x NULLS LAST"
+order = "ordered"
+tags = ["null"]
+
+[[case]]
+id = "t004_select_alias"
+description = "GROUP BY naming a select item's alias, as GROUP BY month over DATE_TRUNC('month', ts) with COUNT(DISTINCT); the page lists column names, so the recording decides. Catches: the alias rejected, or the rows grouped by the raw timestamp instead of the month"
+columns = [{ name = "ts", type = "TIMESTAMP_NTZ" }, { name = "c", type = "NUMBER(38,0)" }]
+rows = [
+  ["'2024-01-05 10:00:00'", "1"],
+  ["'2024-01-20 11:00:00'", "1"],
+  ["'2024-01-31 23:59:59'", "2"],
+  ["'2024-02-01 00:00:00'", "2"],
+  ["NULL", "3"],
+]
+query = "SELECT DATE_TRUNC('month', ts) AS month, COUNT(DISTINCT c) AS n FROM input GROUP BY month ORDER BY month NULLS LAST"
+order = "ordered"
+tags = ["type-combination"]
+
+[[case]]
+id = "t005_alias_shadows_column"
+compile_error = true
+description = "A select alias spelled like an input column: the recording decides whether GROUP BY reads the column or the alias. Catches: the alias preferred where Snowflake reads the column, or the reverse"
+columns = [{ name = "ts", type = "TIMESTAMP_NTZ" }, { name = "c", type = "NUMBER(38,0)" }]
+rows = [
+  ["'2024-01-05 10:00:00'", "1"],
+  ["'2025-01-05 10:00:00'", "2"],
+  ["'2025-06-05 10:00:00'", "2"],
+]
+query = "SELECT YEAR(ts) AS c, COUNT(*) AS n FROM input GROUP BY c ORDER BY c, n"
+order = "ordered"
+tags = ["type-combination"]

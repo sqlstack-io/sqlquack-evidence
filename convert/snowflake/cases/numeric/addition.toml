@@ -1,0 +1,96 @@
+category = "numeric"
+construct = "node:add"
+session_profile = "utc-v1"
+
+[[case]]
+id = "integers"
+description = "Integer addition, including NULL and the largest 38-digit result."
+columns = [{ name = "a", type = "NUMBER(38,0)" }, { name = "b", type = "NUMBER(38,0)" }]
+rows = [
+  ["1", "2"],
+  ["-5", "3"],
+  ["0", "0"],
+  ["NULL", "1"],
+  ["99999999999999999999999999999999999998", "1"],
+]
+expression = "a + b"
+tags = ["null", "zero", "negative", "boundary"]
+
+[[case]]
+id = "mixed_scales"
+description = "Adding numbers of different scales; the result scale is the larger one."
+columns = [{ name = "a", type = "NUMBER(10,2)" }, { name = "b", type = "NUMBER(12,4)" }]
+rows = [["1.25", "0.0001"], ["-0.01", "0"], ["NULL", "NULL"]]
+expression = "a + b"
+tags = ["null", "zero", "negative"]
+
+[[case]]
+id = "capped_precision"
+description = "Adding NUMBER(38,10) and NUMBER(38,0), whose exact precision would exceed 38."
+columns = [{ name = "a", type = "NUMBER(38,10)" }, { name = "b", type = "NUMBER(38,0)" }]
+rows = [
+  ["1.0000000001", "2"],
+  ["-0.5", "0"],
+  ["NULL", "1"],
+  ["1234567890123456789012345678.0000000001", "1"],
+]
+expression = "a + b"
+tags = ["null", "zero", "negative", "boundary"]
+
+[[case]]
+id = "integer_literal"
+description = "Adding an integer literal to a decimal column."
+columns = [{ name = "a", type = "NUMBER(10,2)" }]
+rows = [
+  ["1.25"],
+  ["-3.00"],
+  ["0"],
+  ["NULL"],
+  ["99999999.99"],
+]
+expression = "a + 1"
+tags = ["null", "zero", "negative", "boundary"]
+
+[[case]]
+id = "decimal_literal"
+description = "Adding a decimal literal, typed from its digits."
+columns = [{ name = "a", type = "NUMBER(38,0)" }]
+rows = [
+  ["1"],
+  ["-2"],
+  ["0"],
+  ["NULL"],
+]
+expression = "a + 1.50"
+tags = ["null", "zero", "negative"]
+
+[[case]]
+id = "float_operand"
+description = "Adding a FLOAT and a NUMBER yields a FLOAT."
+columns = [{ name = "a", type = "FLOAT" }, { name = "b", type = "NUMBER(10,2)" }]
+rows = [
+  ["0.1", "0.20"],
+  ["-1.5", "0"],
+  ["NULL", "1"],
+  ["1e308", "1"],
+]
+expression = "a + b"
+tags = ["null", "zero", "negative", "boundary"]
+
+[[case]]
+id = "numbers_and_null_types"
+description = "NUMBER and FLOAT beside an untyped NULL in +, -, * and /: the result types."
+columns = [{ name = "a", type = "NUMBER(5,0)" }, { name = "b", type = "NUMBER(38,0)" }, { name = "c", type = "NUMBER(20,5)" }, { name = "d", type = "NUMBER(10,2)" }, { name = "f", type = "FLOAT" }]
+rows = [["1", "2", "3.5", "4.25", "0.5"]]
+query = "SELECT a + NULL AS a1, NULL - a AS a2, b + NULL AS b1, c - NULL AS c1, d + NULL AS d1, NULL + d AS d4, d * NULL AS d2, d / NULL AS d3, f + NULL AS f1, f * NULL AS f2 FROM input"
+order = "ordered"
+tags = ["null"]
+
+[[case]]
+id = "numbers_and_null_types_more"
+description = "NULL beside NUMBER and FLOAT in the arithmetic shapes not yet recorded: NULL first in * and /, FLOAT / NULL, wide NUMBERs times NULL, and a NULL column from a CTE."
+columns = [{ name = "b", type = "NUMBER(38,2)" }, { name = "d", type = "NUMBER(10,2)" }, { name = "f", type = "FLOAT" }, { name = "w", type = "NUMBER(20,5)" }]
+rows = [["1", "4.25", "0.5", "2.5"]]
+query = "WITH c AS (SELECT b, d, f, w, NULL AS n FROM input) SELECT NULL / d AS a1, NULL * d AS a2, f / NULL AS a3, NULL / f AS a4, NULL - f AS a5, b * NULL AS a6, w * NULL AS a7, w / NULL AS a8, d + n AS a9, n * d AS a10, f * n AS a11 FROM c"
+order = "ordered"
+tags = ["null"]
