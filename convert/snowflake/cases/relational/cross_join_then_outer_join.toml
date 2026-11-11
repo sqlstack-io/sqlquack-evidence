@@ -1,0 +1,84 @@
+# A CROSS JOIN, or a JOIN with no ON, followed by FULL or RIGHT JOIN ... ON: whether the ON binds to the whole
+# join so far, ((a, r) FULL JOIN w ON ...), or to a nested join, (a, (r FULL JOIN w ON ...)). The tables are
+# chosen so the two bindings return different row counts: a has 2 rows, r has keys 1 and 2, w has keys 2 and 3.
+category = "relational"
+construct = "join:cross"
+session_profile = "utc-v1"
+
+[[case]]
+id = "cross_join_then_full_join_on"
+description = "CROSS JOIN then FULL JOIN ... ON: 5 rows if the ON binds to the whole join so far, 6 if it binds to a nested join."
+columns = [{ name = "side", type = "VARCHAR" }, { name = "k", type = "NUMBER(38,0)" }, { name = "v", type = "VARCHAR" }]
+rows = [
+  ["'a'", "1", "'a1'"],
+  ["'a'", "2", "'a2'"],
+  ["'r'", "1", "'r1'"],
+  ["'r'", "2", "'r2'"],
+  ["'w'", "2", "'w2'"],
+  ["'w'", "3", "'w3'"],
+]
+query = "SELECT a.v AS av, r.v AS rv, w.v AS wv FROM (SELECT k, v FROM input WHERE side = 'a') a CROSS JOIN (SELECT k, v FROM input WHERE side = 'r') r FULL JOIN (SELECT k, v FROM input WHERE side = 'w') w ON r.k = w.k"
+order = "bag"
+tags = ["null"]
+
+[[case]]
+id = "cross_join_then_right_join_on"
+description = "CROSS JOIN then RIGHT JOIN ... ON: 3 rows if the ON binds to the whole join so far, 4 if it binds to a nested join."
+columns = [{ name = "side", type = "VARCHAR" }, { name = "k", type = "NUMBER(38,0)" }, { name = "v", type = "VARCHAR" }]
+rows = [
+  ["'a'", "1", "'a1'"],
+  ["'a'", "2", "'a2'"],
+  ["'r'", "1", "'r1'"],
+  ["'r'", "2", "'r2'"],
+  ["'w'", "2", "'w2'"],
+  ["'w'", "3", "'w3'"],
+]
+query = "SELECT a.v AS av, r.v AS rv, w.v AS wv FROM (SELECT k, v FROM input WHERE side = 'a') a CROSS JOIN (SELECT k, v FROM input WHERE side = 'r') r RIGHT JOIN (SELECT k, v FROM input WHERE side = 'w') w ON r.k = w.k"
+order = "bag"
+tags = ["null"]
+
+[[case]]
+id = "join_without_on_then_full_join_on"
+description = "JOIN with no ON then FULL JOIN ... ON: 5 rows if the ON binds to the whole join so far, 6 if it binds to a nested join."
+columns = [{ name = "side", type = "VARCHAR" }, { name = "k", type = "NUMBER(38,0)" }, { name = "v", type = "VARCHAR" }]
+rows = [
+  ["'a'", "1", "'a1'"],
+  ["'a'", "2", "'a2'"],
+  ["'r'", "1", "'r1'"],
+  ["'r'", "2", "'r2'"],
+  ["'w'", "2", "'w2'"],
+  ["'w'", "3", "'w3'"],
+]
+query = "SELECT a.v AS av, r.v AS rv, w.v AS wv FROM (SELECT k, v FROM input WHERE side = 'a') a JOIN (SELECT k, v FROM input WHERE side = 'r') r FULL JOIN (SELECT k, v FROM input WHERE side = 'w') w ON r.k = w.k"
+order = "bag"
+tags = ["null"]
+
+[[case]]
+id = "cross_join_then_full_join_on_first_table"
+description = "CROSS JOIN then FULL JOIN ... ON naming the first table: it resolves only if the ON binds to the whole join so far."
+columns = [{ name = "side", type = "VARCHAR" }, { name = "k", type = "NUMBER(38,0)" }, { name = "v", type = "VARCHAR" }]
+rows = [
+  ["'a'", "1", "'a1'"],
+  ["'a'", "2", "'a2'"],
+  ["'r'", "1", "'r1'"],
+  ["'r'", "2", "'r2'"],
+  ["'w'", "2", "'w2'"],
+  ["'w'", "3", "'w3'"],
+]
+query = "SELECT a.v AS av, r.v AS rv, w.v AS wv FROM (SELECT k, v FROM input WHERE side = 'a') a CROSS JOIN (SELECT k, v FROM input WHERE side = 'r') r FULL JOIN (SELECT k, v FROM input WHERE side = 'w') w ON a.k = w.k"
+order = "bag"
+tags = ["null"]
+
+[[case]]
+id = "cross_join_then_full_join_on_empty_middle"
+description = "CROSS JOIN with an empty table, then FULL JOIN ... ON: 2 rows if the ON binds to the whole join so far, 4 if it binds to a nested join."
+columns = [{ name = "side", type = "VARCHAR" }, { name = "k", type = "NUMBER(38,0)" }, { name = "v", type = "VARCHAR" }]
+rows = [
+  ["'a'", "1", "'a1'"],
+  ["'a'", "1", "'a1'"],
+  ["'w'", "2", "'w2'"],
+  ["'w'", "3", "'w3'"],
+]
+query = "SELECT a.v AS av, r.v AS rv, w.v AS wv FROM (SELECT k, v FROM input WHERE side = 'a') a CROSS JOIN (SELECT k, v FROM input WHERE side = 'r') r FULL JOIN (SELECT k, v FROM input WHERE side = 'w') w ON r.k = w.k"
+order = "bag"
+tags = ["null", "duplicates", "empty-input"]
